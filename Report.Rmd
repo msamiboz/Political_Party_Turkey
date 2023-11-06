@@ -1,0 +1,120 @@
+---
+title: "Determinants of Party Membership Levels in Turkish Political Landscape"
+author: "Mehmet Sami Boz"
+date: "2023-11-06"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(broom)
+library(gtsummary)
+setwd("~/Documents/GitHub/Political_Party_Turkey")
+```
+
+```{r dataprep,echo=FALSE,include=FALSE}
+
+data <- read_csv("Party_data.csv")
+
+dataset <- data %>% mutate(Openness= 5-rowSums(is.na(.)),
+                           Age=as.numeric(Sys.Date()-Founded)) %>% 
+                separate(Chair,c("Chair","Co_Chair"),sep = "-") %>% 
+  mutate(Have_cochair=as.factor(ifelse(is.na(Co_Chair),FALSE,TRUE)))
+```
+
+
+
+## Abstract
+
+This research report employs regression analysis to examine the determinants of party membership levels in the intricate landscape of Turkish politics. With a focus on three primary independent variables—party age, the presence of co-chairs, and data disclosure—our study reveals that party age emerges as the most significant factor influencing party membership, while the presence of co-chairs and the extent of data disclosure fail to attain statistical significance. By utilizing a refined dataset that excludes the AKP and parties with nominal memberships, we emphasize the reliability of our results. These findings provide valuable insights into the dynamics of political participation in Turkey, ultimately contributing to a nuanced understanding of party engagement. The report underscores the importance of considering party age in strategic planning and encourages further exploration of related factors, including better constructed openness variables and the impact of constitutional changes, to enrich our comprehension of Turkish political party dynamics.
+
+## Introduction
+
+The vibrant and dynamic landscape of Turkish politics has undergone significant transformations over the years, reflecting the multifaceted nature of its democracy. Central to this democratic process are the political parties that form the cornerstone of the nation's political infrastructure. The composition and strategies of these parties play a pivotal role in shaping the political discourse and in mobilizing citizens to participate in the democratic process. This research seeks to shed light on the underlying Party charateristics that influence party membership, with a particular focus on the independent variables of party age, the presence of co-chairs, and the extent of comprehensive data disclosure.
+
+Turkey's political party system has evolved over time, adapting to changing societal dynamics and political realities. As parties navigate the complex Turkish political terrain, one pertinent question arises: does the age of a political party have an impact on its ability to attract and retain members? Political parties with longer histories may be expected to have developed a broader base of support, while newer parties may struggle to gain a foothold. Similarly, the leadership structure within a party can have profound effects on its appeal and organizational dynamics. The presence of co-chairs, especially of varying age groups, may contribute to distinctive party images and membership recruitment strategies.
+
+Furthermore, the level of information disclosure by political parties can significantly affect their ability to connect with potential members. The degree to which parties share a simple information about their chair name, telephone, and  adress can represent their willigness to be more transparent. Transparency may affect the public's perception of a party's transparency and trustworthiness [need reference]. As the political landscape evolves and citizens demand increased accountability, understanding the role of information disclosure in attracting party members becomes essential.
+
+This research endeavors to explore and dissect the intricate relationships between party age, the presence of co-chairs, and the extent of data disclosure by political parties, and their potential impact on party membership in Turkey. Through empirical analysis of publicly available data on active political parties, this study aims to provide insights into the dynamics of political participation in the Turkish context and, in turn, offer valuable guidance for political parties and policymakers striving to enhance their engagement with the electorate. The findings of this research may hold significance not only for the Turkish political landscape but also for broader discussions on political participation, party dynamics, and the role of transparency in contemporary democracies.
+
+## Data
+
+According to constitiution of the Turkish republic and relevant law[siyasi partiler yasası reference] the court of cassation holds information and oversees political parties in Turkey. And the court publish general information on parties annually. The dataset to dive into our research question Those genreal information tables collected via web scraping.
+
+The original dataset includes Party name, Chair Name, Telephone,Adress and Member count of the parties. Further variables like having co-chair or not and party age can be generated existing variables. In this analysis party ages are calculated as days instead of years.
+
+Since these information are simple and basic, the variable named openness can represent the party's willingness to be transparent and be accountabile. To create the variable we used the following methodology; maximum score is 5 and for every missing data party lose 1 points.
+
+
+## Analysis
+
+```{r descriptive,echo=FALSE}
+
+dataset %>% select(Age,Member_Count,Openness,Have_cochair) %>%
+  tbl_summary(missing = "no",
+              statistic = list(all_continuous() ~ "{median} ({sd})")) %>% 
+  add_n() %>% 
+  bold_labels() %>% as_kable()
+```
+
+As seen from median and standard deviation our dependent variable is highly skewed.We lost significant amount of data due to age but the regression has enough observaiton to be robust.
+
+```{r descriptive2,figures-side,echo=FALSE, fig.show="hold", out.width="50%"}
+
+dataset %>% select(Age) %>% pull %>% hist(30,main="Party Age")
+dataset %>% select(Member_Count) %>% pull %>% hist(30,main="Member Count")
+```
+
+Turkish political environment consist of Younger parties but members amount is Highly skewed due to AKP's 11 milllion mmebership level.
+
+```{r member_vs_age,echo=FALSE,warning=FALSE}
+dataset %>% filter(Member_Count< 100000) %>% select(Member_Count,Age) %>% ggplot(aes(Age,Member_Count))+geom_point()
+```
+
+With member threshold 100k there seem to no linear relationship between Age and Party population.
+
+\begin{table}[!htbp] \centering 
+  \caption{} 
+  \label{Regression on Member Count} 
+\begin{tabular}{@{\extracolsep{5pt}}lcc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+\\[-1.8ex] & \multicolumn{2}{c}{Member\_Count} \\ 
+\\[-1.8ex] & (1) & (2)\\ 
+\hline \\[-1.8ex] 
+ Age & 44.165 & 16.106$^{***}$ \\ 
+  & (36.751) & (6.041) \\ 
+  & & \\ 
+ Openness & 48,189.550 & $-$18,603.450 \\ 
+  & (243,496.300) & (43,804.760) \\ 
+  & & \\ 
+ Have\_cochair & $-$262,014.600 & $-$56,120.070 \\ 
+  & (564,725.000) & (88,979.400) \\ 
+  & & \\ 
+ Constant & $-$223,368.100 & 68,773.830 \\ 
+  & (1,009,547.000) & (185,825.900) \\ 
+  & & \\ 
+\textit{N} & 108 & 84 \\ 
+R$^{2}$ & 0.029 & 0.106 \\ 
+Adjusted R$^{2}$ & 0.001 & 0.072 \\ 
+Residual Std. Error & 1,089,117.000 (df = 104) & 170,748.800 (df = 80) \\ 
+F Statistic & 1.021 (df = 3; 104) & 3.162$^{**}$ (df = 3; 80) \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Notes:} & \multicolumn{2}{r}{$^{***}$Significant at the 1 percent level.} \\ 
+ & \multicolumn{2}{r}{$^{**}$Significant at the 5 percent level.} \\ 
+ & \multicolumn{2}{r}{$^{*}$Significant at the 10 percent level.} \\ 
+\end{tabular} 
+\end{table} 
+
+
+The table provides an overview of the regression results on party membership count, considering three key independent variables. The model reveals that party age stands out as the most influential factor in both regressions. The first regression utilizes the complete dataset, while the second excludes the AKP and parties with zero membership numbers we can call them "zombie parties".
+
+The second dataset, which omits what can be termed as "zombie parties" and the AKP, known for its prolonged governance in Turkey, is considered more reliable for analysis. This is due to the likelihood that AKP's membership figures may be influenced by its extended period in government.
+
+In summary, the research findings indicate that party age significantly contributes to explaining party membership levels. However, the other variables under consideration do not exhibit a statistically significant impact on membership counts.
+
+Further investigation into this relationship and research question may involve employing binary openness variables or the incorporation of time-event categorical variables, such as parties founded before or after the 2010 constitutional change.
