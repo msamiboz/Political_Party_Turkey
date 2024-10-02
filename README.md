@@ -1,7 +1,5 @@
 Determinants of Party Membership Levels in Turkish Political Landscape
 ================
-Mehmet Sami Boz
-2023-11-06
 
 ## Abstract
 
