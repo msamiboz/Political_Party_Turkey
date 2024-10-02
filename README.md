@@ -85,7 +85,7 @@ analysis party ages are calculated as days instead of years.
 
 Since these information are simple and basic, the variable named
 openness can represent the party’s willingness to be transparent and be
-accountabile. To create the variable we used the following methodology;
+accountable. To create the variable we used the following methodology;
 maximum score is 5 and for every missing data party lose 1 points.
 
 ## Analysis

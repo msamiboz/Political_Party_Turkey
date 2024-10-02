@@ -46,7 +46,7 @@ According to constitiution of the Turkish republic and relevant law[siyasi parti
 
 The original dataset includes Party name, Chair Name, Telephone,Adress and Member count of the parties. Further variables like having co-chair or not and party age can be generated existing variables. In this analysis party ages are calculated as days instead of years.
 
-Since these information are simple and basic, the variable named openness can represent the party's willingness to be transparent and be accountabile. To create the variable we used the following methodology; maximum score is 5 and for every missing data party lose 1 points.
+Since these information are simple and basic, the variable named openness can represent the party's willingness to be transparent and be accountable. To create the variable we used the following methodology; maximum score is 5 and for every missing data party lose 1 points.
 
 
 ## Analysis
