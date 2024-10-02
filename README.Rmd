@@ -2,7 +2,9 @@
 title: "Determinants of Party Membership Levels in Turkish Political Landscape"
 author: "Mehmet Sami Boz"
 date: "2023-11-06"
-output: pdf_document
+output:
+  github_document:
+    html_preview: true
 ---
 
 
