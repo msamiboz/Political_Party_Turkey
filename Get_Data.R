@@ -2,11 +2,14 @@
 library(tidyverse)  # For data manipulation and visualization
 library(rvest)      # For web scraping
 library(stringr)    # For string manipulation
+library(httr)
 
 setwd("~/Documents/GitHub/Political_Party_Turkey")
 
 # Read the HTML document from the given URL
-document <- read_html("https://www.yargitaycb.gov.tr/kategori/109/siyasi-parti-genel-bilgileri")
+mainurl <- "http://www.yargitaycb.gov.tr/kategori/38/siyasi-parti-genel-bilgileri"
+page <- GET(mainurl, config = config(ssl_verifypeer = FALSE))
+document <- read_html(content(page, as = "text"))
 
 # Extract all 'href' attributes from 'a' elements on the page
 party_list <- document %>% html_elements("a") %>% html_attr("href")
@@ -41,15 +44,25 @@ for (url in party_list) {
   # Print the current URL
   print(url)
   
+  page <- GET(url, config = config(ssl_verifypeer = FALSE))
+  content <- read_html(content(page, as = "text"))
   # Scrape the party name from the page
-  party_name <- read_html(url) %>% html_nodes("div.newstitle") %>% html_text()
+  party_name <- content %>% html_nodes("div.newstitle") %>% html_text()
   
   # Scrape the party table data from the page
-  party_table <- read_html(url) %>% html_table()
+  party_table <- content %>% html_table()
+  
   
   # Combine the party name and table into a tibble and pivot it
-  abc <- rbind(tibble(X1 = "Name", X2 = party_name), party_table[[1]]) %>%
+  abc <- rbind(tibble(X1 = "Name", X2 = party_name), party_table[[1]][,1:2]) %>%
     pivot_wider(names_from = X1, values_from = X2)
+  possible_colnames <- c("Name","Başkanı","Kuruluş Tarihi",
+                         "Kuruluş Tarihi","Telefon","Telfon",
+                         "Adres","Üye Sayısı","BAŞKANI")
+  if (length(abc)>6){
+    abc <- abc[,colnames(abc) %in% possible_colnames]
+  }
+  
   
   # Rename the columns
   colnames(abc) <- c("Party_Name", "Chair", "Founded", "Telephone", "Address", "Member_Count")
@@ -66,4 +79,4 @@ res <- res %>% mutate(Founded = as.Date(Founded, format = "%d.%m.%Y"),
                       Member_Count = as.numeric(gsub("\\.", "", Member_Count)))
 
 # Write the data to a CSV file
-write_csv(res, "Party_data.csv")
+write_csv(res, "Party_data1.csv")
