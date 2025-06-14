@@ -11,7 +11,7 @@ library(stargazer)
 
 # UI
 ui <- dashboardPage(
-  dashboardHeader(title = "Turkish Political Party Analysis"),
+  dashboardHeader(title = tags$span("Turkish Political Party Analysis", style = "font-size: 16px;")),
   
   dashboardSidebar(
     sidebarMenu(
@@ -35,6 +35,39 @@ ui <- dashboardPage(
     tabItems(
       # Overview Tab
       tabItem(tabName = "overview",
+        fluidRow(
+          box(title = "Introduction", status = "info", solidHeader = TRUE, width = 12, collapsible = TRUE,
+            p("The vibrant and dynamic landscape of Turkish politics has undergone significant transformations over the years, reflecting the multifaceted nature of its democracy. Central to this democratic process are the political parties that form the cornerstone of the nation's political infrastructure. The composition and strategies of these parties play a pivotal role in shaping the political discourse and in mobilizing citizens to participate in the democratic process."),
+            
+            p("This research seeks to shed light on the underlying party characteristics that influence party membership, with a particular focus on the independent variables of party age, the presence of co-chairs, and the extent of comprehensive data disclosure."),
+            
+            p("Turkey's political party system has evolved over time, adapting to changing societal dynamics and political realities. As parties navigate the complex Turkish political terrain, one pertinent question arises: does the age of a political party have an impact on its ability to attract and retain members? Political parties with longer histories may be expected to have developed a broader base of support, while newer parties may struggle to gain a foothold."),
+            
+            p("Furthermore, the level of information disclosure by political parties can significantly affect their ability to connect with potential members. The degree to which parties share simple information about their chair name, telephone, and address can represent their willingness to be more transparent. Transparency may affect the public's perception of a party's accountability and trustworthiness.")
+          )
+        ),
+        
+        fluidRow(
+          box(title = "Dataset Information", status = "info", solidHeader = TRUE, width = 12, collapsible = TRUE,
+            p("According to the constitution of the Turkish Republic and relevant law (Political Parties Law), the Court of Cassation holds information and oversees political parties in Turkey. The court publishes general information on parties annually. The dataset used in this analysis was collected from these general information tables via web scraping."),
+            
+            p("The original dataset includes Party name, Chair Name, Telephone, Address and Member count of the parties. Further variables like having co-chair or not and party age were generated from existing variables. In this analysis, party ages are calculated in years from the founding date."),
+            
+            p(strong("Openness Variable:")),
+            p("Since the information collected is simple and basic, the variable named 'openness' represents the party's willingness to be transparent and accountable. The methodology for creating this variable is as follows:"),
+            tags$ul(
+              tags$li("Maximum score is 5 points"),
+              tags$li("For every missing data field (Chair, Telephone, Address, Member Count), the party loses 1 point"),
+              tags$li("Higher scores indicate greater transparency and data disclosure")
+            ),
+            
+            p(strong("Co-chair Variable:")),
+            p("This binary variable indicates whether a party has co-chairs (TRUE) or a single chair (FALSE). The presence of co-chairs may contribute to distinctive party images and membership recruitment strategies."),
+            
+            p(em("Note: The analysis focuses on active political parties and excludes parties with zero membership ('zombie parties') for more reliable results."))
+          )
+        ),
+        
         fluidRow(
           box(title = "Dataset Controls", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
@@ -69,19 +102,40 @@ ui <- dashboardPage(
           box(title = "Dataset and Party Selection", status = "primary", solidHeader = TRUE, width = 12,
             fluidRow(
               column(6,
-                selectInput("selected_parties", "Choose Parties:", 
+                selectInput("selected_parties", "Choose Up to 5 Parties:", 
                            choices = NULL, multiple = TRUE, selected = NULL)
+              ),
+              column(6,
+                div(id = "party_selection_info", 
+                    p("Please select 1-5 parties to compare.", 
+                      style = "color: #777; margin-top: 25px;"))
               )
             )
           )
         ),
         
         fluidRow(
-          box(title = "Comparison Chart", status = "primary", solidHeader = TRUE, width = 8,
-            plotlyOutput("comparison_plot")
+          box(title = "Member Count Comparison", status = "primary", solidHeader = TRUE, width = 6,
+            plotlyOutput("comparison_member_count")
           ),
           
-          box(title = "Party Details", status = "info", solidHeader = TRUE, width = 4,
+          box(title = "Party Age Comparison", status = "primary", solidHeader = TRUE, width = 6,
+            plotlyOutput("comparison_age")
+          )
+        ),
+        
+        fluidRow(
+          box(title = "Openness Score Comparison", status = "primary", solidHeader = TRUE, width = 6,
+            plotlyOutput("comparison_openness")
+          ),
+          
+          box(title = "Co-chair Status Comparison", status = "primary", solidHeader = TRUE, width = 6,
+            plotlyOutput("comparison_cochair")
+          )
+        ),
+        
+        fluidRow(
+          box(title = "Party Details", status = "info", solidHeader = TRUE, width = 12,
             DT::dataTableOutput("party_details")
           )
         )
@@ -117,8 +171,10 @@ ui <- dashboardPage(
             p("After removing these influential observations, we also reassessed the necessity of control variables. Variables that did not contribute to a significant reduction in deviance were excluded from the model. This led to the development of our fourth and final model."),
             
             p(strong("Despite these refinements, residual diagnostic plots indicate a lack of model adequacy, suggesting that important unobserved variables may be influencing the dependent variable (i.e., an omitted variable bias is likely present). Consequently, we conclude that there is no clear or statistically reliable relationship between party age and member count based on the available data."), 
-              style = "color: #d9534f; font-style: italic;")
-            "this finding are true for both datasets but main analysis done on newer one."
+              style = "color: #d9534f; font-style: italic;"),
+            
+            p(em("These findings are true for both datasets, but the main analysis was conducted on the newer dataset."), 
+              style = "color: #5bc0de; margin-top: 10px;")
           )
         ),
         
@@ -228,12 +284,99 @@ server <- function(input, output, session) {
   })
   
   # Comparison plots
-  output$comparison_plot <- renderPlotly({
-    # Use filtered_data_overview() and input$selected_parties
+  output$comparison_member_count <- renderPlotly({
+    req(input$selected_parties)
+    if(length(input$selected_parties) == 0 || length(input$selected_parties) > 5) return(NULL)
+    
+    comparison_data <- selected_data() %>% 
+      filter(Party_Name %in% input$selected_parties)
+    
+    p <- ggplot(comparison_data, aes(x = reorder(Party_Name, -Member_Count), y = Member_Count, fill = Party_Name)) +
+      geom_col() +
+      labs(title = "Member Count Comparison", 
+           x = "Party", y = "Member Count") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      scale_fill_brewer(type = "qual", palette = "Set3")
+    
+    ggplotly(p)
+  })
+  
+  output$comparison_age <- renderPlotly({
+    req(input$selected_parties)
+    if(length(input$selected_parties) == 0 || length(input$selected_parties) > 5) return(NULL)
+    
+    comparison_data <- selected_data() %>% 
+      filter(Party_Name %in% input$selected_parties)
+    
+    p <- ggplot(comparison_data, aes(x = reorder(Party_Name, -Age), y = Age, fill = Party_Name)) +
+      geom_col() +
+      labs(title = "Party Age Comparison (Years)", 
+           x = "Party", y = "Age (Years)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      scale_fill_brewer(type = "qual", palette = "Set3")
+    
+    ggplotly(p)
+  })
+  
+  output$comparison_openness <- renderPlotly({
+    req(input$selected_parties)
+    if(length(input$selected_parties) == 0 || length(input$selected_parties) > 5) return(NULL)
+    
+    comparison_data <- selected_data() %>% 
+      filter(Party_Name %in% input$selected_parties)
+    
+    p <- ggplot(comparison_data, aes(x = reorder(Party_Name, -Openness), y = Openness, fill = Party_Name)) +
+      geom_col() +
+      labs(title = "Openness Score Comparison", 
+           x = "Party", y = "Openness Score (1-5)") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+            legend.position = "none") +
+      scale_fill_brewer(type = "qual", palette = "Set3") +
+      ylim(0, 5)
+    
+    ggplotly(p)
+  })
+  
+  output$comparison_cochair <- renderPlotly({
+    req(input$selected_parties)
+    if(length(input$selected_parties) == 0 || length(input$selected_parties) > 5) return(NULL)
+    
+    comparison_data <- selected_data() %>% 
+      filter(Party_Name %in% input$selected_parties) %>%
+      mutate(Cochair_Status = ifelse(Have_cochair == TRUE, "Has Co-chair", "Single Chair"))
+    
+    p <- ggplot(comparison_data, aes(x = Party_Name, fill = Cochair_Status)) +
+      geom_bar(stat = "count") +
+      labs(title = "Co-chair Status Comparison", 
+           x = "Party", y = "Count", fill = "Chair Status") +
+      theme_minimal() +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      scale_fill_manual(values = c("Has Co-chair" = "#66c2a5", "Single Chair" = "#fc8d62"))
+    
+    ggplotly(p)
   })
   
   output$party_details <- DT::renderDataTable({
-    # Use filtered_data_overview() and input$selected_parties
+    req(input$selected_parties)
+    if(length(input$selected_parties) == 0 || length(input$selected_parties) > 5) return(NULL)
+    
+    comparison_data <- selected_data() %>% 
+      filter(Party_Name %in% input$selected_parties) %>%
+      select(Party_Name, Chair, Founded, Member_Count, Age, Openness, Have_cochair) %>%
+      mutate(Age = round(Age, 1),
+             Founded = as.character(Founded)) %>%
+      arrange(desc(Member_Count))
+    
+    DT::datatable(comparison_data, 
+                  options = list(scrollX = TRUE, pageLength = 10),
+                  rownames = FALSE,
+                  colnames = c("Party Name", "Chair", "Founded", "Member Count", 
+                              "Age (Years)", "Openness", "Has Co-chair"))
   })
   
   # Statistical models
